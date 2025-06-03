@@ -3,6 +3,7 @@ import sys
 import random
 import os
 
+
 def screen_setup():
 
     pygame.init()
@@ -14,58 +15,71 @@ def screen_setup():
     return screen 
 
 def main_menu(screen, font):
-    menu=True
-    Game_title_font=pygame.font.SysFont("impact" , 60)
-    menu_font=pygame.font.SysFont("impact", 40)
-    select_option=["start new game" , "quit game"]
-    while menu :
 
-        screen.fill((0, 0, 0))
-        
-        Game_title=Game_title_font.render("SPACE WAR" , True , (255, 255, 255))
-        start_new_game=menu_font.render("Start New Game" , True , (255, 255, 255))
-        quit_game=menu_font.render("Quit", True , (255, 255, 255))
+    menu = True
+    background_img=pygame.image.load("/Users/lp1/Desktop/project/rocket-game/images/background.jpeg")
+    background_img=pygame.transform.scale( background_img , (width_screen , height_screen))
 
-        game_title_rect=Game_title.get_rect(center=(width_screen // 2, 30  ))
-        start_new_game_rect=start_new_game.get_rect(center=(width_screen//2 , 200))
-        quit_game_rect=quit_game.get_rect(center=(width_screen//2 , 300))
-        screen.blit(Game_title , game_title_rect) 
-        screen.blit(start_new_game , start_new_game_rect)
-        screen.blit(quit_game , quit_game_rect)
+    Game_title_font = pygame.font.SysFont("impact", 60)
+    menu_font = pygame.font.SysFont("impact", 40)
+    select_options = ["Start New Game", "Settings", "Quit Game"]
+    selected_index = 0
+    
+    while menu:
+        # screen.fill((0, 0, 0))
+        screen.blit(background_img , (0,0))
+        # Render title - we keep it fixed and white
+
+        game_title = Game_title_font.render("SPACE WAR", True, (255, 255, 255))
+        game_title_rect = game_title.get_rect(center=(width_screen // 2, 100))
+        screen.blit(game_title, game_title_rect)
+
+        # Render options with highlighting
+        for i, option_text in enumerate(select_options):
+            if i == selected_index:
+                color = (255, 255, 0)  # Yellow for selected
+            else:
+                color = (255, 255, 255)
+
+            option_rendered = menu_font.render(option_text, True, color)
+            option_rect = option_rendered.get_rect(center=(width_screen // 2, 200 + i * 60))
+            screen.blit(option_rendered, option_rect)
+
         pygame.display.flip()
 
-        events=pygame.event.get()
-        for event in events:
-            if event.type== pygame.QUIT :
+        # Event Handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.KEYDOWN :
-                if event.key == pygame.K_RETURN :
-                    option=select_option[0]
-                    return option
-                
-                elif event.key == pygame.K_q :
-                    option=select_option[1]
-            
-                    return option
+
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected_index = (selected_index - 1) % len(select_options)
+                elif event.key == pygame.K_DOWN:
+                    selected_index = (selected_index + 1) % len(select_options)
+                elif event.key == pygame.K_RETURN:
+                    return select_options[selected_index].lower()
 
 def display_score(screen , font , score):
     score_text = font.render(f"Score: {score}", True, (255, 255, 255))
     screen.blit(score_text, (10, 10))
-    
 
 def game_over(screen , score):
 
-    font = pygame.font.SysFont("impact" , 30)
+    Game_over_font = pygame.font.SysFont("impact" , 60)
     screen.fill((0, 0, 0))
-    Game_over=font.render(f"GAME OVER", True , (255, 255, 255))
-    final_score=font.render(f"FINAL SCORE: {score}", True , (255, 255, 255))
-    screen.blit(final_score, ( width_screen//2 -100 ,height_screen//2 ))
-    screen.blit(Game_over ,( (width_screen//2 -100) , height_screen//2-40 ) )
+
+    Game_over_title=Game_over_font.render(f"GAME OVER", True , (255, 0 , 0))
+    final_score_title=Game_over_font.render(f"FINAL SCORE: {score}" , True , (255, 255, 255))
+
+    game_over_title_rect=Game_over_title.get_rect(center=(width_screen//2 , height_screen//2-50))
+    final_score_title_rect=final_score_title.get_rect(center=(width_screen//2 , height_screen//2 + 10))
+    screen.blit(final_score_title, final_score_title_rect)
+    screen.blit(Game_over_title , game_over_title_rect )
     pygame.display.flip()
     pygame.time.wait(5000)
     
-
 def update_speed_enemy(score , enemy_speed):
 
     if score > 40 :
@@ -76,31 +90,38 @@ def update_speed_enemy(score , enemy_speed):
         enemy_speed = 4
     return enemy_speed
 
-def manage_enemy_collision(screen , Total_enemies ,score, enemy_speed , enemy_rocket_img, bullets , rocket , running):
+def manage_enemy_collision(screen , Total_enemies , score , enemy_speed , enemy_rocket_img , bullets , rocket , running):
      
-    for enemy_rocket in Total_enemies:
+    for enemy in Total_enemies[:]:  # iterate safely
+        rect = enemy["rect"]
+        if enemy["type"] == "unpredictable":
+            rect.x += enemy.get("dx", 0)
+            rect.y += enemy_speed
+            if random.randint(1, 10) == 5:
+                enemy["dx"] = random.choice([-2, -1, 0, 1, 2])
+            # Ensure it stays in bounds
+            rect.x = max(0, min(width_screen - rect.width, rect.x))
+        else:
+            rect.y += enemy_speed
 
-        enemy_rocket.y += enemy_speed
-        screen.blit(enemy_rocket_img, enemy_rocket)
+        screen.blit(enemy_rocket_img, rect)
 
-        if enemy_rocket.y >= height_screen:
-            Total_enemies.remove(enemy_rocket)
+        if rect.y >= height_screen:
+            Total_enemies.remove(enemy)
             continue
 
         for bullet in bullets:
-            if bullet.colliderect(enemy_rocket) :
+            if bullet.colliderect(rect):
                 bullets.remove(bullet)
-                Total_enemies.remove(enemy_rocket)
+                Total_enemies.remove(enemy)
                 score += 5
                 break
-        
-        # for enemy_rock in Total_enemies:
-        if enemy_rocket.colliderect(rocket) :
-                running=False
-                game_over(screen, score)
-                    
-    return screen , Total_enemies , bullets , score , running
 
+        if rect.colliderect(rocket):
+            running = False
+            game_over(screen, score)
+
+    return screen, Total_enemies, bullets, score, running
 
 def start_game():
 
@@ -122,6 +143,9 @@ def start_game():
     file_path="/Users/lp1/Desktop/project/rocket-game/rocket_game.py"
     file=os.path.dirname(file_path)
 
+    background_img=pygame.image.load(os.path.join(file , "images" , "background.jpeg"))
+    background_img=pygame.transform.scale(background_img , (width_screen , height_screen))
+
     rocket_img = pygame.image.load(os.path.join(file, "images", "spaceship.png"))
     rocket_img = pygame.transform.scale(rocket_img, (rocket_size, rocket_size))             # resize if needed
 
@@ -133,7 +157,7 @@ def start_game():
 
     while running:
 
-        screen.fill((0, 0, 0))
+        screen.blit(background_img , (0,0))
         clock.tick(60)
     
         events = pygame.event.get()
@@ -156,6 +180,7 @@ def start_game():
             screen.blit(score_text, (10, 10))
             pygame.display.flip()
             continue
+            
 
         rocket=screen.blit(rocket_img, (rocket_x_cordinate, rocket_y_cordinate))  # draw on screen
 
@@ -185,27 +210,33 @@ def start_game():
 
         enemy_speed=update_speed_enemy(score, enemy_speed)
 
-        if random.randint(1, 50) == 5:
 
-            enemy_rocket_x=random.randint(0, width_screen - rocket_size)
-            enemy_rocket_y=0
-            enemy_rocket=pygame.Rect(enemy_rocket_x, enemy_rocket_y, enemy_size, enemy_size)
-            Total_enemies.append(enemy_rocket)
-        
+        if random.randint(1, 50) == 5:
+            enemy_rocket_x = random.randint(0, width_screen - rocket_size)
+            enemy_rocket_y = 0
+            enemy_rect = pygame.Rect(enemy_rocket_x, enemy_rocket_y, enemy_size, enemy_size)
+            enemy_type = random.choice(["normal", "unpredictable"])
+            
+            if enemy_type == "unpredictable":
+                enemy = {"rect": enemy_rect, "type": enemy_type, "dx": random.choice([-2, -1, 1, 2])}
+            else:
+                enemy = {"rect": enemy_rect, "type": enemy_type}
+            Total_enemies.append(enemy)
+  
         if random.randint(1,50) == 5 and score > 20 :
 
             special_enemy_rocket_x=random.randint( 0, width_screen-40)
             special_enemy_rocket_y=0
             special_enemy_rocket=pygame.Rect(special_enemy_rocket_x, special_enemy_rocket_y, 40,40)
-            Total_special_enemies.append(special_enemy_rocket)
+            Total_special_enemies.append({"rect": special_enemy_rocket, "type": "special"})
 
         for special_enemy_rocket in Total_special_enemies[:]:
 
             if random.randint(1,100)== 10:
-                enemy_bullet=pygame.Rect(special_enemy_rocket.centerx , special_enemy_rocket.bottom , 4 , 5)
+                enemy_bullet = pygame.Rect(special_enemy_rocket["rect"].centerx, special_enemy_rocket["rect"].bottom, 4, 5)
                 Total_S_enemy_bullets.append(enemy_bullet)
 
-            if special_enemy_rocket.y >= height_screen:
+            if  special_enemy_rocket["rect"].y >= height_screen:
                 Total_special_enemies.remove(special_enemy_rocket)
 
         for enemy_bullets in Total_S_enemy_bullets[:] :
@@ -218,8 +249,8 @@ def start_game():
             if enemy_bullets.colliderect(rocket):
                 running=False
                 game_over(screen , score)
-
-        screen , Total_enemies , bullets , score , running  =manage_enemy_collision(screen , Total_enemies ,score, enemy_speed , enemy_rocket_img, bullets , rocket, running)
+        screen, Total_enemies, bullets, score, running = manage_enemy_collision(screen, Total_enemies, score, enemy_speed, enemy_rocket_img, bullets, rocket, running)
+        # screen , Total_enemies , bullets , score , running  =manage_enemy_collision(screen , Total_enemies ,score, enemy_speed , enemy_rocket_img, bullets , rocket, running)
         screen , Total_special_enemies , bullets , score, running= manage_enemy_collision(screen , Total_special_enemies ,score, enemy_speed , special_enemy_rocket_img, bullets , rocket, running)
         
     
@@ -227,21 +258,133 @@ def start_game():
         display_score(screen , font , score)
         pygame.display.flip()
         
-    
+def control(screen , font):
+    control_menu=True
+    selected_control_option=0
+    title_font=pygame.font.SysFont("impact" , 60)
+    while control_menu:
 
+        screen.fill((0,0,0))
+        rokcet_control_title=title_font.render("Rocket control" , True , (255, 0, 0))
+        rokcet_control_title_rect=rokcet_control_title.get_rect(center=(width_screen//2 , 50))
+        screen.blit(rokcet_control_title , rokcet_control_title_rect)
+
+        controls=[ "ARROW KEY UP : MOVE UP" ,  "ARROW KEY DOWN : MOVE DOWN" ,
+                   "ARROW KEY LEFT : MOVE LEFT" ,  "ARROW KEY RIGHT : MOVE RIGHT" , 
+                   "SHOOT BULLET : SPACE" ,
+                   "PAUSE : PRESS P" , 
+                   "EXIT : ESCAPE" , 
+                   "BACK TO SETTING"
+                   ]
+
+        for i , option in enumerate(controls):
+
+            if i== selected_control_option:
+                color = (255, 255 ,0)
+            else :
+                color = (255, 255 ,255)
+            
+            option_title= font.render( option , True , color)
+            option_title_rect=option_title.get_rect(center=(width_screen//2 , 150+ i*50))
+            screen.blit(option_title , option_title_rect)
+        
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            
+
+            elif event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    sys.exit()
+                elif event.key == pygame.K_UP:
+                    selected_control_option= (selected_control_option-1) % len(controls)
+                elif event.key == pygame.K_DOWN:
+                    selected_control_option= (selected_control_option+1) % len(controls)
+            
+                elif event.key == pygame.K_RETURN:
+                    
+                    if selected_control_option==7:
+                        return controls[selected_control_option]
+                    
+def setting(screen , font):
+
+    setting_menu=True
+    menu_font=pygame.font.SysFont("impact" , 40)
+    Title_font=pygame.font.SysFont("impact" , 60)
+    setting_list=["Sound Effects : ON" , "Controls" , "Back to main menu"]
+    setting_selected_index=0
+    Music_on=True
+
+    while setting_menu:
+
+        screen.fill((0, 0, 0))
+        setting_title=Title_font.render("Setting" , True , (255,255, 255))
+        setting_title_rect=setting_title.get_rect(center=(width_screen//2 , 100))
+        screen.blit(setting_title , setting_title_rect)
+
+        for i , option_selected in enumerate(setting_list):
+            if i== setting_selected_index:
+                color =(255, 255 ,0)  #yellow color 
+            else:
+                color = (255, 255, 255)
+            
+            option_title=menu_font.render(option_selected , True , color)
+            option_title_rect=option_title.get_rect(center=(width_screen//2 , 200+ i*60))
+            screen.blit(option_title , option_title_rect)
+
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_ESCAPE :
+                    pygame.quit()
+                    sys.exit()
+                     
+                if event.key == pygame.K_UP:
+                    setting_selected_index=(setting_selected_index-1) % len(setting_list)
+                elif event.key ==pygame.K_DOWN:
+                    setting_selected_index= (setting_selected_index+1) % len(setting_list)
+
+                elif event.key == pygame.K_RETURN :
+                    Music_on = not Music_on
+                    if setting_selected_index==0:
+                        if Music_on:
+                           setting_list[0]="Sound Effects : ON"
+                        else:
+                           setting_list[0]="Sound Effects : OFF"
+
+                    elif setting_selected_index==1:
+                        control(screen , font)
+
+                    elif setting_selected_index==2:
+                        
+                        return setting_list[setting_selected_index]
+
+    
 def main():
     
     screen = screen_setup()
     font = pygame.font.SysFont("impact" , 30)
-    
-    
+
     while True:
-        
+
         option=main_menu(screen , font)
         if option=="start new game":
             start_game()
         elif option=="quit game" :
             pygame.quit()
 
-        
+        elif option == "settings" :
+            setting(screen , font)
+            
+            
 main()
