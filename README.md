@@ -24,9 +24,10 @@ A fast-paced 2D space shooter built in Python using the Pygame library. Blast th
 
 ---
 
-## 📸 Screenshots
+## 🎥 Demo
 
-> _You can add screenshots or GIFs here once you have them._
+![Space War Gameplay](demo.gif)
+
 
 ---
 
