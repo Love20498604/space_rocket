@@ -41,6 +41,6 @@ A fast-paced 2D space shooter built in Python using the Pygame library. Blast th
 ### Installation
 
 1. **Clone the repository**  
-```bash
-git clone https://github.com/your-username/space-war-game.git
+
+git clone https://github.com/Love20498604/space-war-game.git
 cd space-war-game
