@@ -20,7 +20,7 @@ A fast-paced 2D space shooter built in Python using the Pygame library. Blast th
 
 - **Language**: Python  
 - **Game Engine**: [Pygame](https://www.pygame.org/docs/)  
-- **IDE**: Visual Studio Code 
+
 
 ---
 
